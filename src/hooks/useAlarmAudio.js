@@ -182,6 +182,53 @@ export function useAlarmAudio() {
     lullabyRef.current.oscillators = [];
   };
 
+  // --- Son du screamer : bruit blanc + cri strident descendant ---
+  const playScreamerSound = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
+
+    const ctx = audioContextRef.current;
+    const duration = 1.2;
+
+    // Bruit blanc (texture de "cri" bruité)
+    const bufferSize = Math.floor(ctx.sampleRate * duration);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * 0.5;
+    }
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.4, ctx.currentTime);
+    noiseGain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+
+    noiseSource.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noiseSource.start();
+    noiseSource.stop(ctx.currentTime + duration);
+
+    // Oscillateur aigu qui descend brutalement (effet "cri")
+    const shriek = ctx.createOscillator();
+    const shriekGain = ctx.createGain();
+    shriek.type = 'sawtooth';
+    shriek.frequency.setValueAtTime(1600, ctx.currentTime);
+    shriek.frequency.exponentialRampToValueAtTime(70, ctx.currentTime + duration);
+
+    shriekGain.gain.setValueAtTime(0.2, ctx.currentTime);
+    shriekGain.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+
+    shriek.connect(shriekGain);
+    shriekGain.connect(ctx.destination);
+    shriek.start();
+    shriek.stop(ctx.currentTime + duration);
+  };
+
   return {
     speak,
     startHypnoticSound,
@@ -189,5 +236,6 @@ export function useAlarmAudio() {
     changeFrequency,
     startLullaby,
     stopLullaby,
+    playScreamerSound,
   };
 }

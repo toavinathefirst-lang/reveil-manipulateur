@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+@keyframes screamer-flash {
+  0%, 100% { background-color: #000000; }
+  50% { background-color: #7f1d1d; }
+}
+
+@keyframes screamer-shake {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  20% { transform: translate(-6px, 4px) scale(1.03); }
+  40% { transform: translate(6px, -4px) scale(1.05); }
+  60% { transform: translate(-4px, -6px) scale(1.03); }
+  80% { transform: translate(4px, 6px) scale(1.04); }
+}

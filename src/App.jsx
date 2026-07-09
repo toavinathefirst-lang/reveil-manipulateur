@@ -13,9 +13,12 @@ import { useAlarmAudio } from './hooks/useAlarmAudio';
 import { useWeather } from './hooks/useWeather';
 import ClockDisplay from './components/ClockDisplay';
 import AlarmInterface from './components/AlarmInterface';
+import ScreamerOverlay from './components/ScreamerOverlay';
 
 const LULLABY_CHANCE = 0.35;
-const CREEPY_CHANCE = 0.08; // rare, 8% de chance par tentative
+const CREEPY_CHANCE = 0.07
+const SCREAMER_CHANCE = 0.15; // seulement possible si DÉJÀ en mode creepy
+const SCREAMER_DURATION_MS = 1300;
 
 export default function App() {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -25,6 +28,7 @@ export default function App() {
   const [negotiationStep, setNegotiationStep] = useState(0);
   const [manipulationText, setManipulationText] = useState('');
   const [isCreepy, setIsCreepy] = useState(false);
+  const [isScreamerActive, setIsScreamerActive] = useState(false);
 
   const {
     speak,
@@ -33,6 +37,7 @@ export default function App() {
     changeFrequency,
     startLullaby,
     stopLullaby,
+    playScreamerSound,
   } = useAlarmAudio();
   const { weather } = useWeather();
 
@@ -51,17 +56,18 @@ export default function App() {
   }, [currentTime, alarmTime, isAlarmSet, isRinging]);
 
   useEffect(() => {
-    if (!isRinging) return;
+    if (!isRinging || isScreamerActive) return;
     const timeoutId = setTimeout(() => {
       handleFellAsleep();
     }, 2 * 60 * 1000);
     return () => clearTimeout(timeoutId);
-  }, [isRinging, negotiationStep]);
+  }, [isRinging, negotiationStep, isScreamerActive]);
 
   const triggerAlarm = () => {
     setIsRinging(true);
     setNegotiationStep(0);
-    setIsCreepy(false); // nouveau cycle = pas creepy au départ
+    setIsCreepy(false);
+    setIsScreamerActive(false);
 
     let text = getRandomQuote(0);
     const weatherLine = weather ? getWeatherQuote(weather.temperature) : null;
@@ -74,16 +80,40 @@ export default function App() {
     startHypnoticSound(false);
   };
 
+  const triggerScreamer = () => {
+    stopHypnoticSound();
+    stopLullaby();
+    window.speechSynthesis.cancel();
+
+    setIsScreamerActive(true);
+    playScreamerSound();
+
+    setTimeout(() => {
+      setIsScreamerActive(false);
+      const text = getRandomCreepyQuote();
+      setManipulationText(text);
+      speak(text, true);
+      startHypnoticSound(true);
+    }, SCREAMER_DURATION_MS);
+  };
+
   const handleAttemptToWakeUp = () => {
+    if (isScreamerActive) return; // on ignore les clics pendant le screamer
+
     const nextStep = negotiationStep + 1;
 
     if (nextStep < gaslightingQuotes.length) {
       setNegotiationStep(nextStep);
 
-      // Si déjà en mode creepy, on y reste jusqu'à la fin du cycle
       const becomingCreepy = isCreepy || Math.random() < CREEPY_CHANCE;
 
       if (becomingCreepy) {
+        // Le screamer ne peut arriver que si on était DÉJÀ en creepy avant ce clic
+        if (isCreepy && Math.random() < SCREAMER_CHANCE) {
+          triggerScreamer();
+          return;
+        }
+
         if (!isCreepy) setIsCreepy(true);
         stopLullaby();
         const text = getRandomCreepyQuote();
@@ -115,6 +145,7 @@ export default function App() {
   };
 
   const handleSuccumb = () => {
+    if (isScreamerActive) return;
     stopHypnoticSound();
     stopLullaby();
     window.speechSynthesis.cancel();
@@ -139,10 +170,13 @@ export default function App() {
     setIsAlarmSet(false);
     setNegotiationStep(0);
     setIsCreepy(false);
+    setIsScreamerActive(false);
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center font-sans antialiased p-4">
+      {isScreamerActive && <ScreamerOverlay />}
+
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-900/20 rounded-full blur-[120px] pointer-events-none" />
 
       <main className="w-full max-w-md bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-8 shadow-2xl relative overflow-hidden z-10">
