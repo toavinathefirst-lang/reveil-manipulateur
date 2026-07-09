@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Moon, VolumeX, BedDouble, AlertCircle, Thermometer } from 'lucide-react';
+import { Clock, Moon, VolumeX, BedDouble, AlertCircle, Thermometer, Eye } from 'lucide-react';
 
 export default function AlarmInterface({
   isRinging,
@@ -12,6 +12,7 @@ export default function AlarmInterface({
   handleSuccumb,
   handleAttemptToWakeUp,
   weather,
+  isCreepy,
 }) {
   if (!isRinging) {
     return (
@@ -59,12 +60,26 @@ export default function AlarmInterface({
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-br from-indigo-950/40 to-slate-900 border border-indigo-500/20 rounded-2xl p-6 text-center shadow-inner relative overflow-hidden">
+      <div
+        className={`rounded-2xl p-6 text-center shadow-inner relative overflow-hidden border transition-colors duration-700 ${
+          isCreepy
+            ? 'bg-gradient-to-br from-rose-950/60 to-black border-rose-900/50'
+            : 'bg-gradient-to-br from-indigo-950/40 to-slate-900 border-indigo-500/20'
+        }`}
+      >
         <div className="absolute top-2 right-2 flex gap-1">
-          <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
+          <span className={`w-2 h-2 rounded-full animate-ping ${isCreepy ? 'bg-rose-600' : 'bg-indigo-500'}`} />
         </div>
-        <BedDouble className="w-10 h-10 text-indigo-400 mx-auto mb-4" />
-        <p className="text-sm text-slate-200 font-medium leading-relaxed italic">
+        {isCreepy ? (
+          <Eye className="w-10 h-10 text-rose-500 mx-auto mb-4 animate-pulse" />
+        ) : (
+          <BedDouble className="w-10 h-10 text-indigo-400 mx-auto mb-4" />
+        )}
+        <p
+          className={`text-sm font-medium leading-relaxed italic ${
+            isCreepy ? 'text-rose-200' : 'text-slate-200'
+          }`}
+        >
           "{manipulationText}"
         </p>
       </div>
@@ -72,7 +87,11 @@ export default function AlarmInterface({
       <div className="flex flex-col gap-3">
         <button
           onClick={handleSuccumb}
-          className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold rounded-xl shadow-lg transition-all"
+          className={`w-full py-4 font-semibold rounded-xl shadow-lg transition-all text-white ${
+            isCreepy
+              ? 'bg-gradient-to-r from-rose-800 to-red-900 hover:from-rose-700 hover:to-red-800'
+              : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500'
+          }`}
         >
           <Moon className="w-5 h-5 inline mr-2" /> Tu as raison, je me rendors (10 min...)
         </button>

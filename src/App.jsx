@@ -4,11 +4,18 @@ import {
   getRandomQuote,
   getRandomSleepyQuote,
   getWeatherQuote,
+  getRandomLullabyQuote,
+  getRandomSuccessQuote,
+  getRandomGiveUpQuote,
+  getRandomCreepyQuote,
 } from './quotes';
 import { useAlarmAudio } from './hooks/useAlarmAudio';
 import { useWeather } from './hooks/useWeather';
 import ClockDisplay from './components/ClockDisplay';
 import AlarmInterface from './components/AlarmInterface';
+
+const LULLABY_CHANCE = 0.35;
+const CREEPY_CHANCE = 0.08; // rare, 8% de chance par tentative
 
 export default function App() {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -17,17 +24,23 @@ export default function App() {
   const [isRinging, setIsRinging] = useState(false);
   const [negotiationStep, setNegotiationStep] = useState(0);
   const [manipulationText, setManipulationText] = useState('');
+  const [isCreepy, setIsCreepy] = useState(false);
 
-  const { speak, startHypnoticSound, stopHypnoticSound, changeFrequency } = useAlarmAudio();
+  const {
+    speak,
+    startHypnoticSound,
+    stopHypnoticSound,
+    changeFrequency,
+    startLullaby,
+    stopLullaby,
+  } = useAlarmAudio();
   const { weather } = useWeather();
 
-  // Horloge temps réel
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Vérification de l'alarme
   useEffect(() => {
     if (isAlarmSet && !isRinging) {
       const currentString = currentTime.toTimeString().slice(0, 5);
@@ -37,20 +50,18 @@ export default function App() {
     }
   }, [currentTime, alarmTime, isAlarmSet, isRinging]);
 
-  // Si aucune interaction pendant 2 minutes, on suppose que l'utilisateur s'est rendormi
   useEffect(() => {
     if (!isRinging) return;
-
     const timeoutId = setTimeout(() => {
       handleFellAsleep();
     }, 2 * 60 * 1000);
-
     return () => clearTimeout(timeoutId);
   }, [isRinging, negotiationStep]);
 
   const triggerAlarm = () => {
     setIsRinging(true);
     setNegotiationStep(0);
+    setIsCreepy(false); // nouveau cycle = pas creepy au départ
 
     let text = getRandomQuote(0);
     const weatherLine = weather ? getWeatherQuote(weather.temperature) : null;
@@ -59,46 +70,75 @@ export default function App() {
     }
 
     setManipulationText(text);
-    speak(text);
-    startHypnoticSound();
+    speak(text, false);
+    startHypnoticSound(false);
   };
 
   const handleAttemptToWakeUp = () => {
     const nextStep = negotiationStep + 1;
+
     if (nextStep < gaslightingQuotes.length) {
       setNegotiationStep(nextStep);
-      const text = getRandomQuote(nextStep);
-      setManipulationText(text);
-      speak(text);
-      changeFrequency(nextStep);
+
+      // Si déjà en mode creepy, on y reste jusqu'à la fin du cycle
+      const becomingCreepy = isCreepy || Math.random() < CREEPY_CHANCE;
+
+      if (becomingCreepy) {
+        if (!isCreepy) setIsCreepy(true);
+        stopLullaby();
+        const text = getRandomCreepyQuote();
+        setManipulationText(text);
+        speak(text, true);
+        startHypnoticSound(true);
+        return;
+      }
+
+      const triggerLullaby = Math.random() < LULLABY_CHANCE;
+      if (triggerLullaby) {
+        const text = getRandomLullabyQuote();
+        setManipulationText(text);
+        speak(text, false);
+        startLullaby();
+      } else {
+        stopLullaby();
+        const text = getRandomQuote(nextStep);
+        setManipulationText(text);
+        speak(text, false);
+        changeFrequency(nextStep);
+      }
     } else {
-      const finalText = "D'accord... Gâche ta journée si tu veux. Mais je t'aurai demain.";
+      const finalText = getRandomGiveUpQuote();
       setManipulationText(finalText);
-      speak(finalText);
+      speak(finalText, isCreepy);
       resetAlarm();
     }
   };
 
   const handleSuccumb = () => {
     stopHypnoticSound();
+    stopLullaby();
     window.speechSynthesis.cancel();
-    speak("Excellent choix. Fais de beaux rêves. Le monde attendra.");
+    const finalText = getRandomSuccessQuote();
+    speak(finalText, isCreepy);
     resetAlarm();
   };
 
   const handleFellAsleep = () => {
     stopHypnoticSound();
+    stopLullaby();
     const text = getRandomSleepyQuote();
     setManipulationText(text);
-    speak(text);
+    speak(text, isCreepy);
     resetAlarm();
   };
 
   const resetAlarm = () => {
     stopHypnoticSound();
+    stopLullaby();
     setIsRinging(false);
     setIsAlarmSet(false);
     setNegotiationStep(0);
+    setIsCreepy(false);
   };
 
   return (
@@ -124,6 +164,7 @@ export default function App() {
           handleSuccumb={handleSuccumb}
           handleAttemptToWakeUp={handleAttemptToWakeUp}
           weather={weather}
+          isCreepy={isCreepy}
         />
       </main>
     </div>
