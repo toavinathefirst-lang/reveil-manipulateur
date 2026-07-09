@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Moon, VolumeX, BedDouble, AlertCircle } from 'lucide-react';
+import { Clock, Moon, VolumeX, BedDouble, AlertCircle, Thermometer } from 'lucide-react';
 
 export default function AlarmInterface({
   isRinging,
@@ -10,7 +10,8 @@ export default function AlarmInterface({
   manipulationText,
   negotiationStep,
   handleSuccumb,
-  handleAttemptToWakeUp
+  handleAttemptToWakeUp,
+  weather,
 }) {
   if (!isRinging) {
     return (
@@ -40,10 +41,16 @@ export default function AlarmInterface({
         >
           {isAlarmSet ? 'Annuler le piège' : "Programmer l'arnaque"}
         </button>
-        
+
         {isAlarmSet && (
           <div className="flex items-center gap-2 justify-center text-xs text-indigo-400 bg-indigo-500/5 py-2 rounded-lg border border-indigo-500/10">
             <Moon className="w-3.5 h-3.5 animate-pulse" /> Prêt à saboter ton réveil à {alarmTime}...
+          </div>
+        )}
+
+        {weather && (
+          <div className="flex items-center gap-2 justify-center text-[11px] text-slate-500">
+            <Thermometer className="w-3.5 h-3.5" /> Il fait {weather.temperature}°C dehors actuellement
           </div>
         )}
       </div>
@@ -69,7 +76,7 @@ export default function AlarmInterface({
         >
           <Moon className="w-5 h-5 inline mr-2" /> Tu as raison, je me rendors (10 min...)
         </button>
-        
+
         <button
           onClick={handleAttemptToWakeUp}
           className="w-full py-3 bg-slate-800 hover:bg-slate-750 text-slate-400 hover:text-slate-200 font-medium text-xs rounded-xl border border-slate-700/60 transition-all"
@@ -77,7 +84,7 @@ export default function AlarmInterface({
           <VolumeX className="w-4 h-4 inline mr-2" /> Non ! Je DOIS me lever (Tentative {negotiationStep + 1}/5)
         </button>
       </div>
-      
+
       <div className="text-[10px] text-slate-500 text-center flex items-center justify-center gap-1">
         <AlertCircle className="w-3 h-3" /> Info : La résistance est inutile. Ton lit t'aime.
       </div>
